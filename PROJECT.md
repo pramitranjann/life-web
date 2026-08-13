@@ -10,7 +10,7 @@ Ship Pramit's private personal operating system as a standalone web product at `
 - Do not break the `/api/life/*` contract consumed by PRLifeMobile and the desk printer.
 
 ## Current state
-2026-08-13 — The initial standalone extraction is committed and pushed to `pramitranjann/life-web`. Browser routes are promoted from `/life/*` to root paths such as `/`, `/tasks`, `/projects`, and `/studio`; all 41 API route handlers remain under `/api/life/*`. Type checking, unit tests, dependency audit, and the Webpack production build pass. Vercel project `pramitranjann/life-web` is connected to GitHub with the Next.js preset; core Production credentials are configured, but the project is not yet deployed or assigned `life.pramitranjan.com`.
+2026-08-13 — The initial standalone extraction is committed and pushed to `pramitranjann/life-web`. Browser routes are promoted from `/life/*` to root paths such as `/`, `/tasks`, `/projects`, and `/studio`; all 41 API route handlers remain under `/api/life/*`. Type checking, unit tests, dependency audit, and the Webpack production build pass. Vercel project `pramitranjann/life-web` is connected to GitHub with the Next.js preset and has a Ready production deployment. Login and the authenticated mobile tasks API pass production smoke tests. `life.pramitranjan.com` is attached but awaits its third-party DNS A record.
 
 The app still uses the existing Supabase project, Google Calendar connection, Anthropic synthesis, Resend email, mobile bearer token, and printer device token. The daily cron is configured in this repo but must remain disabled in production until the portfolio copy is disabled.
 
@@ -28,7 +28,7 @@ The app still uses the existing Supabase project, Google Calendar connection, An
 - Verify all root browser routes and authenticated mutations against a safe environment.
 - Re-enter the non-exportable sensitive credentials for Resend and Google Calendar OAuth (`RESEND_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`).
 - Rotate the mobile bearer token during the coordinated native/web cutover.
-- Add `life.pramitranjan.com` only after the first production deployment passes authenticated smoke checks.
+- At the registrar, set `A life.pramitranjan.com 76.76.21.21`; Vercel cannot activate the attached domain while third-party DNS has no matching record.
 - Disable the portfolio cron before enabling this project's cron.
 - Redirect old `/life/*` browser routes and temporarily proxy old `/api/life/*` requests.
 - Remove Life source and dependencies from the portfolio only after the compatibility window closes.
@@ -43,4 +43,4 @@ The app still uses the existing Supabase project, Google Calendar connection, An
 - The default Next 16 Turbopack production build can stall during compile here; keep `next build --webpack` unless a later upgrade is explicitly verified.
 
 ## Next action
-Deploy the connected Vercel project, verify login and core Supabase-backed routes, then restore calendar/email credentials before domain and cron cutover.
+Set and verify the custom-domain A record, restore calendar/email credentials, then test PRLifeMobile build 25 against the live hostname before domain, cron, and portfolio compatibility cutover.
