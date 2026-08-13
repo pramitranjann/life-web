@@ -1,0 +1,4 @@
+{"hooks":{"PreToolUse":[
+  {"matcher":"Bash","hooks":[{"type":"command","command":"bash ~/agent-system/hooks/no-redundant-build.sh"}]},
+  {"matcher":"Bash","hooks":[{"type":"command","command":"bash ~/agent-system/hooks/graphify-nudge.sh"}]}
+]}}

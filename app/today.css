@@ -1,0 +1,298 @@
+/* Today v2 lab overrides. Loads after globals.css — same-specificity rules
+   here win over the shipped `.t2-*` rules. Every selector is scoped under
+   `.life-shell` per the file's edit contract. Spacing scale: 8 / 12 / 16 / 24. */
+
+/* ── No-scroll frame ──────────────────────────────────────────────────────
+   CSS only. A JS measured height lived here and was the cause of the scroll,
+   not the cure: it computed innerHeight - top - 24 and ignored
+   .life-app-shell's own bottom padding, running ~24px tall. The tell was that
+   the page did NOT scroll when hydration failed. overflow: hidden means a
+   wrong constant clips instead of scrolling the document.
+   Two rows: head (auto), console (flexible). Only the right column scrolls.
+   min-height: 0 runs down every link in the chain or the grid refuses to
+   shrink. */
+.life-shell .t2 {
+  /* 248px: the site header puts content at ~215px and .life-app-shell adds
+     24px of bottom padding. 220px overflowed by ~20px — the "slight" scroll. */
+  height: calc(100dvh - 248px);
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 16px;
+}
+
+.life-shell .t2-console {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+}
+
+.life-shell .t2-console-left {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+
+.life-shell .t2-console-right {
+  display: grid;
+  grid-auto-rows: auto;
+  align-content: start;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Capture grows to fill the left column; only its footer stays pinned. */
+.life-shell .t2-capture {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 14px;
+  min-height: 0;
+}
+
+.life-shell .t2-capture-project { display: inline-flex; align-items: center; gap: var(--s-2); min-width: 0; color: var(--life-muted); font-size: var(--t-meta); }
+.life-shell .t2-capture-project select { min-width: 0; max-width: 11rem; border: 0; background: transparent; color: var(--life-text); font-size: var(--t-meta); }
+.life-shell .t2-card-head-meta, .life-shell .t2-phone-actions { display: flex; align-items: center; gap: var(--s-2); }
+.life-shell .t2-card-add { position: relative; }
+.life-shell .t2-card .count-pill { min-width: 28px; height: 28px; }
+.life-shell .t2-add-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--life-border); background: transparent; color: var(--life-muted); cursor: pointer; font-size: var(--t-body); line-height: 1; transition-property: color, border-color, background, transform; transition-duration: 0.14s; transition-timing-function: cubic-bezier(0.2, 0, 0, 1); }
+.life-shell .t2-add-button:hover { color: var(--life-text); border-color: var(--life-muted); background: var(--life-panel-2); }
+.life-shell .t2-add-button:active { transform: scale(0.96); }
+.life-shell .t2-add-button:focus-visible { outline: 2px solid var(--life-accent); outline-offset: 2px; }
+.life-shell .t2-quick-form { display: grid; gap: var(--s-2); width: min(24rem, calc(100vw - (2 * var(--life-gutter)))); padding: var(--s-3); border: 1px solid var(--life-border); background: var(--life-panel); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5); }
+.life-shell .t2-card-head-meta .t2-quick-form { position: absolute; top: calc(100% + var(--s-2)); right: 0; z-index: 35; }
+.life-shell .t2-quick-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .75fr) minmax(0, 1fr); gap: var(--s-2); }
+.life-shell .t2-quick-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--s-2); }
+.life-shell .t2-entry-tags { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: var(--s-1); font-size: var(--t-micro); letter-spacing: var(--track-meta); text-transform: uppercase; color: var(--life-muted); }
+.life-shell .t2-entry-tags > span { padding: 2px var(--s-1); border: 1px solid var(--life-hairline); }
+.life-shell .t2-phone { display: none; }
+
+.life-shell .t2-input {
+  height: 100%;
+  min-height: 0;
+  resize: none;
+}
+
+/* ── Card padding (14px) ─────────────────────────────────────────────────
+   Card owns the outer inset; head/foot drop their side padding so edges
+   line up, and the 12px card gap does the vertical spacing. */
+.life-shell .t2-card {
+  padding: 14px;
+  gap: 12px;
+}
+
+.life-shell .t2-card .life-card-head {
+  padding: 0 0 12px;
+}
+
+.life-shell .t2-card .life-card-foot {
+  padding: 12px 0 0;
+}
+
+/* ── Header top row ──────────────────────────────────────────────────────
+   Stamp on the left, up next right-aligned opposite it — one fact, one
+   place. Row never wraps: the title ellipsizes instead of pushing the
+   header to a second line. */
+.life-shell .t2-top {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Second-loudest thing on screen after the clock: its own block, not
+   trailing text, with a left accent rule to mark it off from the stamp.
+   align-items: stretch gives this the same box height as the clock/date, and
+   centring its own lines inside that box keeps it optically level with the
+   stamp opposite. */
+.life-shell .t2-upnext {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* Centred in the header row, not bottom-pinned: the block is shorter than
+     the clock, and pinning it low read as misaligned rather than deliberate. */
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 340px;
+  flex: 0 1 auto;
+  padding-left: 14px;
+  border-left: 2px solid var(--life-accent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.life-shell .t2-upnext-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--life-label);
+}
+
+.life-shell .t2-upnext-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.life-shell .t2-upnext-time {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  color: var(--life-text);
+  flex: 0 0 auto;
+}
+
+.life-shell .t2-upnext-title {
+  font-family: var(--font-reading);
+  font-size: 16px;
+  color: var(--life-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-shell .t2-upnext-countdown {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--life-accent);
+}
+
+/* ── Row links (up next + schedule) ──────────────────────────────────────
+   Both link to the calendar; the hover card carries the detail. Anchor
+   chrome reset so they still read as rows. */
+.life-shell .t2-line {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+}
+
+.life-shell .t2-line:focus-visible,
+.life-shell .t2-upnext:focus-visible {
+  outline: 2px solid var(--life-accent);
+  outline-offset: 2px;
+}
+
+/* ── Contrast floor ───────────────────────────────────────────────────────
+   --life-label is #6f6f6f, which is 3.9:1 on --life-bg and 3.8:1 on
+   --life-panel — under AA before you account for the size. Everything below
+   was set in it, including a control and two clock columns. --life-muted
+   (#a4a4a4) is 7.9:1 and reads at these sizes.
+   NOT touched: .t2-time and .t2-date stay identical to each other on purpose. */
+.life-shell .t2-status { color: var(--life-muted); }
+.life-shell .t2-at { color: var(--life-muted); }
+.life-shell .t2-task-project { color: var(--life-muted); }
+.life-shell .t2-input::placeholder { color: var(--life-muted); }
+/* A button is the last thing that should sit under AA. */
+.life-shell .t2-capture-foot .life-mic { color: var(--life-muted); }
+.life-shell .t2-check:hover { color: var(--life-muted); border-color: var(--life-muted); }
+
+/* 10px is the floor in Life (81 uses vs 23 at 9px); 9px was the outlier. */
+.life-shell .t2-upnext-label { font-size: 10px; letter-spacing: 0.16em; color: var(--life-muted); }
+
+/* ── Row hover ────────────────────────────────────────────────────────────
+   Was --life-muted-bg (#0d0d0d) on a --life-panel card (#111111) — darker
+   than the surface, so hovering made the row recede. A hover has to come
+   forward. The bleed matches the card's 14px inset so the band doesn't stop
+   flush against the text.
+   10%, not 6%: 6% of --life-text on #111 is a ~14/255 shift, which reads as
+   nothing — the row stopped looking hoverable at all. This lands near #252525
+   against the card, plus an accent rule so the affordance survives at a
+   glance and doesn't rely on a background alone. */
+.life-shell .t2-task,
+.life-shell .t2-line {
+  padding: 6px 8px;
+  margin: 0 -8px;
+  box-shadow: inset 2px 0 0 0 transparent;
+}
+.life-shell .t2-task:hover,
+.life-shell .t2-line:hover {
+  background: color-mix(in oklch, var(--life-text) 10%, transparent);
+  box-shadow: inset 2px 0 0 0 var(--life-accent);
+}
+/* The hover card's trigger wrapper is what the pointer actually enters, so
+   the cursor has to be set there — the row is a div for tasks, not a link. */
+.life-shell .t2-tasks .life-hovercard-trigger { cursor: pointer; }
+
+/* Asymmetric on purpose: the highlight answers immediately when you arrive and
+   takes its time leaving. Equal in and out is what reads as mechanical — the
+   row felt like a switch rather than something responding to you. */
+.life-shell .t2-task,
+.life-shell .t2-line {
+  transition-property: background, box-shadow;
+  transition-duration: 0.22s;
+  transition-timing-function: var(--life-ease-out);
+}
+.life-shell .t2-task:hover,
+.life-shell .t2-line:hover {
+  transition-duration: 0.09s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .life-shell .t2-task,
+  .life-shell .t2-line { transition: none; }
+}
+
+/* 9px was off the 8/12/16 scale this file declares. */
+.life-shell .t2-lines { gap: 10px; }
+
+/* ── Narrow viewports: stack, let the page scroll ────────────────────────── */
+@media (max-width: 900px) {
+  .life-shell .t2 {
+    height: auto;
+  }
+  .life-shell .t2-console {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .life-shell .t2-console-left {
+    grid-template-rows: auto;
+  }
+  .life-shell .t2-capture {
+    grid-template-rows: auto auto;
+  }
+  .life-shell .t2-input {
+    height: auto;
+    min-height: 120px;
+    resize: vertical;
+  }
+  .life-shell .t2-console-right {
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 699px) {
+  .life-shell .t2-desktop { display: none; }
+  .life-shell .t2-phone { display: grid; gap: var(--s-4); padding: 18px 0 0; }
+  .life-shell .t2-phone .t2-capture { grid-template-rows: auto auto auto; min-height: 15rem; }
+  .life-shell .t2-phone .t2-phone-voice { width: 100%; }
+  .life-shell .t2-phone .t2-phone-voice .life-mic { width: 100%; min-height: 54px; justify-content: center; border-color: var(--life-accent); color: var(--life-accent); background: var(--life-accent-soft); font-size: var(--t-body); }
+  .life-shell .t2-phone .t2-phone-voice .life-mic:active { transform: scale(0.96); }
+  .life-shell .t2-phone .t2-phone-voice .autosave-chip,
+  .life-shell .t2-phone .t2-phone-voice .error-text { margin-top: var(--s-2); }
+  .life-shell .t2-phone .t2-input { height: auto; min-height: 9rem; resize: vertical; }
+  .life-shell .t2-phone .t2-capture-foot { flex-wrap: wrap; }
+  .life-shell .t2-phone .t2-capture-foot .life-mic { min-height: 44px; }
+  .life-shell .t2-phone .t2-capture-project { flex: 1 1 auto; justify-content: flex-end; }
+  .life-shell .t2-phone .t2-capture-foot .life-kbd { display: none; }
+  .life-shell .t2-phone .t2-capture-foot .life-btn { width: 100%; min-height: 46px; margin-left: 0; }
+  .life-shell .t2-phone-actions { display: flex; align-items: flex-start; flex-wrap: wrap; }
+  .life-shell .t2-phone-actions .t2-card-add { width: auto; }
+  .life-shell .t2-phone-actions .t2-card-add:has(.t2-quick-form) { flex: 1 0 100%; }
+  .life-shell .t2-phone-actions .t2-add-button { width: auto; min-height: 34px; height: 34px; padding: 0 var(--s-3); gap: var(--s-2); font-size: var(--t-small); }
+  .life-shell .t2-phone-actions .t2-quick-form { width: 100%; margin-top: var(--s-2); box-shadow: none; }
+  .life-shell .t2-quick-fields { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .life-shell .t2-add-button { transition: none; }
+}
+
+/* The hover card lives in globals.css as .life-hc — one implementation shared
+   with the rolodex, instead of a private copy here that drifts from it. */

@@ -1,0 +1,360 @@
+/* Rolodex v2 lab overrides. Loads after globals.css — same-specificity rules
+   here win by source order, so this file overrides the lab-* styles that
+   live in globals.css rather than editing them directly. */
+
+/* ── List hierarchy ────────────────────────────────────────────────────── */
+.life-shell .lab-clist-name { font-size: 15px; }
+.life-shell .lab-clist-role { font-size: 12px; color: var(--life-muted); }
+.life-shell .lab-clist-row.is-over .lab-clist-name { font-weight: 600; }
+
+/* ── Person header role ────────────────────────────────────────────────── */
+.life-shell .lab-person-id p { color: var(--life-muted); }
+
+/* ── 2. Add-person modal ──────────────────────────────────────────────── */
+
+.life-shell .life-modal { padding: 0; border: 1px solid var(--life-border); background: var(--life-panel); color: var(--life-text); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6); width: min(560px, calc(100vw - 32px)); margin: auto; transition: opacity 0.18s var(--life-ease-out), transform 0.18s var(--life-ease-out), overlay 0.18s allow-discrete, display 0.18s allow-discrete; }
+.life-shell .life-modal::backdrop { background: rgba(0, 0, 0, 0.6); transition: opacity 0.18s var(--life-ease-out), overlay 0.18s allow-discrete, display 0.18s allow-discrete; }
+.life-shell .life-modal:not([open]) { opacity: 0; transform: scale(0.97); }
+@starting-style {
+  .life-shell .life-modal[open] { opacity: 0; transform: scale(0.97); }
+  .life-shell .life-modal[open]::backdrop { opacity: 0; }
+}
+
+.life-shell .life-modal-inner { display: grid; max-height: 84vh; }
+.life-shell .life-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--life-hairline); }
+.life-shell .life-modal-title { margin: 0; font-family: var(--life-display); font-weight: var(--life-display-weight); font-size: 18px; line-height: 1.25; letter-spacing: -0.01em; }
+.life-shell .life-modal-close { padding: 0; width: 26px; height: 26px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--life-label); font-size: 18px; line-height: 1; cursor: pointer; transition: color 0.14s cubic-bezier(0.2, 0, 0, 1), transform 0.14s cubic-bezier(0.2, 0, 0, 1); }
+.life-shell .life-modal-close:hover { color: var(--life-text); }
+.life-shell .life-modal-close:active { transform: scale(0.96); }
+.life-shell .life-modal-close:focus-visible { outline: 2px solid var(--life-accent); outline-offset: 2px; }
+.life-shell .life-modal-body { padding: 18px; overflow-y: auto; }
+.life-shell .life-modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--life-hairline); }
+
+/* The form's own box would double up with the modal's — strip it here. */
+.life-shell .life-modal .lab-rolodex-add { border: 0; padding: 0; background: transparent; }
+
+/* ── 3. Person page: asymmetric split + back affordance ──────────────────── */
+
+.life-shell .lab-person-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  /* Flush with the page margin, not indented to the name. Indenting it by the
+     stripe + gap put it in the middle of nothing — a back link belongs on the
+     same left edge as the content column it leaves. */
+  margin: 0 0 -6px;
+  font-size: 12px;
+  /* Was --life-label, which is the colour of things you are not meant to
+     click. This is the only escape from the page. */
+  color: var(--life-muted);
+  transition: color 0.14s cubic-bezier(0.2, 0, 0, 1), transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+}
+.life-shell .lab-person-back:hover { transform: translateX(-2px); }
+.life-shell .lab-person-back:active { transform: scale(0.96); }
+.life-shell .lab-person-back:focus-visible { outline: 2px solid var(--life-accent); outline-offset: 2px; }
+
+.life-shell .lab-person-split { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+.life-shell .lab-person-col-main { display: grid; gap: 18px; min-width: 0; }
+/* Wider than the left column's 18px: these are unrelated sections with ruled
+   headings, and at 18px the rule of the next one crowded the last value. */
+.life-shell .lab-person-col-side { display: grid; gap: 28px; min-width: 0; }
+
+@media (max-width: 900px) {
+  .life-shell .lab-person-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Save and add failures, inline. A silent failed save is indistinguishable
+   from a successful one, so this is never just a console log. */
+.life-shell .lab-person-error {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-left: 2px solid var(--life-accent);
+  background: var(--life-accent-soft);
+  font-size: var(--t-body);
+  color: var(--life-text);
+}
+
+/* ── 3b. Person page: type hierarchy, inline edit, the cadence CTA ───────── */
+
+/* Header identity. Name and role are spans now, not h3/p, because both swap
+   to inputs in edit mode and a heading that becomes a text field is a lie. */
+.life-shell .lab-person-id { display: grid; gap: 3px; min-width: 0; }
+.life-shell .lab-person-name {
+  font-family: var(--life-display); font-weight: var(--life-display-weight);
+  font-size: 26px; line-height: 1.1; letter-spacing: -0.02em; color: var(--life-text);
+}
+.life-shell .lab-person-role {
+  font-family: var(--font-mono); font-size: 12px; color: var(--life-label);
+}
+
+/* Inline edit: same box, same metrics, only the affordance appears. A dotted
+   underline rather than a full input chrome — the page still reads as a
+   document you are typing into, not a form you are filling. */
+.life-shell .lab-person-edit {
+  display: block; width: 100%; min-width: 0; margin: -2px -6px; padding: 2px 6px;
+  font: inherit; color: inherit; letter-spacing: inherit; line-height: inherit;
+  background: color-mix(in oklch, var(--life-text) 4%, transparent);
+  border: 0; border-bottom: 1px dashed var(--life-hairline);
+  border-radius: 0; resize: none;
+  transition: background 0.14s cubic-bezier(0.2, 0, 0, 1), border-color 0.14s cubic-bezier(0.2, 0, 0, 1);
+}
+.life-shell .lab-person-edit:hover { border-bottom-color: var(--life-border); }
+.life-shell .lab-person-edit:focus {
+  outline: 0;
+  background: color-mix(in oklch, var(--life-text) 7%, transparent);
+  border-bottom-color: var(--life-accent);
+}
+.life-shell .lab-person-edit::placeholder { color: var(--life-label); }
+/* The two fields that must not move when they gain a border. */
+.life-shell textarea.lab-person-edit { min-height: 3.2em; }
+
+/* 8px put Want's accent rule right against the sentence above it, so the two
+   blocks fused back into the one paragraph the rule exists to separate. */
+.life-shell .lab-person-who { gap: 16px; }
+
+/* How vs Want. Three differences at once — colour, label, rule — because at
+   one difference they read as one paragraph in two sentences. */
+.life-shell .lab-person-how {
+  display: block; margin: 0; font-size: 15px; line-height: 1.55;
+  color: var(--life-muted); text-wrap: pretty;
+}
+.life-shell .lab-person-want {
+  display: grid; gap: 5px; margin: 0;
+  padding: 2px 0 2px 12px; border-left: 2px solid var(--life-accent);
+}
+.life-shell .lab-person-want-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--life-accent);
+}
+.life-shell .lab-person-want-value {
+  display: block; font-size: 14px; line-height: 1.5;
+  color: var(--life-text); text-wrap: pretty;
+}
+
+/* The cadence block: readout and control in one object. The button is not
+   floated in a corner — it is the right-hand half of the thing that told you
+   there was a problem. */
+.life-shell .lab-person-state {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch; gap: 0; flex-wrap: nowrap; padding: 0;
+}
+.life-shell .lab-person-state-main { padding: 16px; min-width: 0; }
+/* --life-label is 3.9:1 on this panel; at 11px that is below AA twice over,
+   and this line carries three facts you actually need. */
+.life-shell .lab-person-state-sub { margin-top: 7px; color: var(--life-muted); }
+.life-shell .lab-person-state .lab-person-meter {
+  display: block; margin-top: 12px; font-size: 13px;
+}
+.life-shell .lab-person-cta {
+  display: grid; align-content: center; gap: 3px;
+  padding: 16px 22px; min-width: 9.5rem;
+  border: 0; border-left: 1px solid var(--life-border);
+  background: color-mix(in oklch, var(--life-accent) 12%, transparent);
+  color: var(--life-text); text-align: left; cursor: pointer;
+  transition: background 0.14s cubic-bezier(0.2, 0, 0, 1), transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+}
+.life-shell .lab-person-state.is-over .lab-person-cta {
+  background: var(--life-accent); color: var(--life-bg);
+}
+.life-shell .lab-person-cta:hover { background: color-mix(in oklch, var(--life-accent) 26%, transparent); }
+.life-shell .lab-person-state.is-over .lab-person-cta:hover { background: color-mix(in oklch, var(--life-accent) 86%, var(--life-text)); }
+.life-shell .lab-person-cta:active { transform: scale(0.96); }
+.life-shell .lab-person-cta:focus-visible { outline: 2px solid var(--life-accent); outline-offset: -4px; }
+.life-shell .lab-person-cta-label { font-size: 15px; letter-spacing: -0.01em; }
+/* 0.85, not 0.75: when the CTA goes solid accent this text is #0a0a0a on
+   #ff3120, and fading it to 0.75 dropped it to 4.15:1. 0.85 holds 4.76:1. */
+.life-shell .lab-person-cta-sub {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; opacity: 0.85;
+}
+
+/* Three tiers. Section > field label > value. They differ by size, family and
+   rule — NOT by getting progressively fainter. Three greys stacked on #0a0a0a
+   is how the column ended up unreadable.
+   Scoped to .lab-person, not .lab-person-col-side: this was on the right
+   column only, so "History" sat at 10px --life-label while "Contact" three
+   inches away was 12px full-contrast and ruled. Same element, same page, two
+   different treatments. */
+.life-shell .lab-person .lab-person-block h4 {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 14px; font-size: 12px; letter-spacing: 0.16em;
+  /* Full contrast: these are the page's signposts. */
+  color: var(--life-text);
+}
+.life-shell .lab-person .lab-person-block h4::after {
+  content: ''; flex: 1 1 auto; height: 1px; background: var(--life-hairline);
+}
+/* h4.lab-person-subhead, not .lab-person-subhead: the rule above matches the
+   same element at 0,3,1 and was silently beating a 0,3,0 margin-top — that is
+   why Notes ran straight into In Life with no gap at all. */
+.life-shell .lab-person h4.lab-person-subhead { margin-top: 28px; }
+
+/* History. "26 Jun" and "Call" were byte-identical in treatment — same size,
+   family, tracking, case and colour — while being a timestamp and a category.
+   The date is the spine you scan, so it stays plain text and gets tabular
+   figures so the column aligns; the kind becomes a tag, borrowing the chip
+   form already used for likes and references rather than inventing a style. */
+.life-shell .lab-person-event {
+  grid-template-columns: 4.75rem auto minmax(0, 1fr);
+  align-items: baseline; gap: 14px; padding: 13px 0;
+}
+.life-shell .lab-person-event-at {
+  font-size: 11px; letter-spacing: 0.06em; text-transform: none;
+  font-variant-numeric: tabular-nums; color: var(--life-muted);
+}
+.life-shell .lab-person-event-kind {
+  justify-self: start; padding: 3px 8px;
+  border: 1px solid var(--life-hairline);
+  font-size: 10px; letter-spacing: 0.12em; color: var(--life-muted);
+}
+.life-shell .lab-person-event-note { color: var(--life-muted); }
+
+.life-shell .lab-person-contact { gap: 14px; }
+/* 5.5rem: DISLIKES is the longest label and must not wrap at 10px + tracking. */
+.life-shell .lab-person-contact-row { grid-template-columns: 5.5rem minmax(0, 1fr); gap: 14px; }
+.life-shell .lab-person-contact-label {
+  /* 10px, not 9px: 10px is the established floor in Life (81 uses vs 23), and
+     --life-muted is 7.9:1 on the panel where --life-label is 3.9:1. At 9px and
+     3.9:1 these labels were below AA twice over. */
+  font-size: 10px; letter-spacing: 0.14em; color: var(--life-muted);
+}
+.life-shell .lab-person-contact-value { font-size: 14px; color: var(--life-text); }
+.life-shell .lab-person-note {
+  display: block; margin: 0; font-size: 14px; line-height: 1.6; color: var(--life-muted);
+}
+
+/* Link editor. Label and URL stack so a long URL never squeezes the label to
+   nothing, and the row keeps its delete control at a fixed width. */
+.life-shell .lab-person-linkedit { display: grid; gap: 12px; min-width: 0; }
+.life-shell .lab-person-linkrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) 22px; gap: 8px 10px; align-items: center;
+}
+.life-shell .lab-person-linkrow > input:first-child { grid-column: 1; }
+.life-shell .lab-person-linkrow > input:nth-child(2) { grid-column: 1; font-size: 12px; color: var(--life-muted); }
+.life-shell .lab-person-linkrow > .lab-person-linkdel { grid-column: 2; grid-row: 1 / span 2; }
+.life-shell .lab-person-linkdel {
+  display: grid; place-items: center; width: 22px; height: 22px; padding: 0;
+  border: 0; background: transparent; color: var(--life-muted);
+  font-size: 15px; line-height: 1; cursor: pointer;
+  transition: color 0.14s cubic-bezier(0.2, 0, 0, 1), transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+}
+.life-shell .lab-person-linkdel:hover { color: var(--life-accent); }
+.life-shell .lab-person-linkdel:active { transform: scale(0.96); }
+.life-shell .lab-person-linkdel:focus-visible { outline: 2px solid var(--life-accent); outline-offset: 1px; }
+.life-shell .lab-person-linkadd {
+  justify-self: start; padding: 5px 10px;
+  border: 1px dashed var(--life-border); background: transparent;
+  color: var(--life-muted); font-family: var(--font-mono); font-size: 11px; cursor: pointer;
+  transition: color 0.14s cubic-bezier(0.2, 0, 0, 1), border-color 0.14s cubic-bezier(0.2, 0, 0, 1), transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+}
+.life-shell .lab-person-linkadd:hover { color: var(--life-text); border-color: var(--life-muted); }
+.life-shell .lab-person-linkadd:active { transform: scale(0.96); }
+.life-shell .lab-person-linkadd:focus-visible { outline: 2px solid var(--life-accent); outline-offset: 2px; }
+
+/* In Life references go somewhere. The arrow only appears on hover, so the
+   chip stays a chip until you aim at it. */
+.life-shell .lab-person-ref {
+  color: var(--life-muted); text-decoration: none;
+  transition: color 0.14s cubic-bezier(0.2, 0, 0, 1), border-color 0.14s cubic-bezier(0.2, 0, 0, 1), transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+}
+.life-shell .lab-person-ref:hover { color: var(--life-text); border-color: var(--life-muted); }
+.life-shell .lab-person-ref:active { transform: scale(0.96); }
+.life-shell .lab-person-ref:focus-visible { outline: 2px solid var(--life-accent); outline-offset: 2px; }
+.life-shell .lab-person-ref-arrow {
+  opacity: 0; margin-left: -4px;
+  transition: opacity 0.14s cubic-bezier(0.2, 0, 0, 1), margin-left 0.14s cubic-bezier(0.2, 0, 0, 1);
+}
+.life-shell .lab-person-ref:hover .lab-person-ref-arrow,
+.life-shell .lab-person-ref:focus-visible .lab-person-ref-arrow { opacity: 1; margin-left: 0; }
+
+/* Chips carried --life-muted at 11px; the label beside them is now the same
+   grey, so the chips step up to keep the tiers apart. */
+.life-shell .lab-person-col-side .lab-horizon-chip { font-size: 12px; color: var(--life-text); }
+.life-shell .lab-person-chips { gap: 8px; }
+
+/* globals.css collapses this row to two columns under 700px, but that rule
+   lives in a media query in an EARLIER file — an unconditional rule here
+   would beat it at every width. Restate it. */
+@media (max-width: 700px) {
+  .life-shell .lab-person-event { grid-template-columns: 4.75rem minmax(0, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .life-shell .lab-person-state { grid-template-columns: minmax(0, 1fr); }
+  .life-shell .lab-person-cta { border-left: 0; border-top: 1px solid var(--life-border); }
+}
+
+/* ── 4. Horizon: denser rows, gridlines, interactive dots ─────────────────── */
+
+/* Three columns, not four: the due-day number came out, the axis carries it. */
+.life-shell .lab-horizon-row {
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) minmax(0, 4.5rem);
+  min-height: 40px;
+}
+.life-shell .lab-horizon-id { display: grid; gap: 2px; min-width: 0; }
+.life-shell .lab-horizon-role {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--life-label);
+}
+.life-shell .lab-horizon-last {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--life-label);
+}
+.life-shell .lab-horizon-foot { grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) minmax(0, 4.5rem); }
+
+/* Faint gridlines at the same tick positions as the axis labels, built the
+   same way as the now-line: a short segment per row, stacked into what
+   reads as one continuous line the length of the body. */
+.life-shell .lab-horizon-grid {
+  position: absolute; top: -4px; bottom: -4px; width: 1px;
+  background: var(--life-hairline); pointer-events: none;
+}
+.life-shell .lab-horizon-row:first-child .lab-horizon-grid { top: 0; }
+
+/* The hover-card trigger carries the axis position and is the hit target: a
+   22px box centred on the dot. The card measures against THIS element, so it
+   opens on the dot instead of at the track's left edge, and 7px of colour is
+   no longer the thing you have to hit with a pointer. */
+.life-shell .lab-horizon-dotwrap {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  display: grid; place-items: center; width: 22px; height: 22px;
+}
+.life-shell .lab-horizon-dot {
+  position: static; margin: 0; transform: none;
+  border: 0; padding: 0; cursor: pointer;
+  transition: transform 0.14s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.14s cubic-bezier(0.2, 0, 0, 1);
+}
+.life-shell .lab-horizon-dot:hover,
+.life-shell .lab-horizon-dot:focus-visible { transform: scale(1.6); }
+.life-shell .lab-horizon-dot:active { transform: scale(0.96); }
+.life-shell .lab-horizon-dot:focus-visible { outline: 2px solid var(--life-accent); outline-offset: 3px; }
+
+/* The dot's hover card is .life-hc in globals.css — the same one Today uses. */
+
+@media (max-width: 640px) {
+  .life-shell .lab-horizon-role { display: none; }
+  .life-shell .lab-horizon-row,
+  .life-shell .lab-horizon-foot { grid-template-columns: minmax(0, 4.5rem) minmax(0, 1fr) minmax(0, 3.75rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .life-shell .life-modal,
+  .life-shell .life-modal::backdrop { transition: opacity 0.18s var(--life-ease-out), overlay 0.18s allow-discrete, display 0.18s allow-discrete; }
+  .life-shell .life-modal:not([open]) { transform: none; }
+  .life-shell .life-modal-close { transition: none; }
+  .life-shell .lab-person-back { transition: none; }
+  .life-shell .lab-person-back:hover { transform: none; }
+  .life-shell .lab-horizon-dot { transition: none; }
+  .life-shell .lab-horizon-dot:hover,
+  .life-shell .lab-horizon-dot:focus-visible { transform: none; }
+  .life-shell .lab-person-edit,
+  .life-shell .lab-person-cta,
+  .life-shell .lab-person-linkdel,
+  .life-shell .lab-person-linkadd,
+  .life-shell .lab-person-ref,
+  .life-shell .lab-person-ref-arrow { transition: none; }
+  .life-shell .lab-person-cta:active,
+  .life-shell .lab-person-linkdel:active,
+  .life-shell .lab-person-linkadd:active,
+  .life-shell .lab-person-ref:active { transform: none; }
+}

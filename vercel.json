@@ -1,0 +1,9 @@
+{
+  "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/life/cron/daily",
+      "schedule": "30 14 * * *"
+    }
+  ]
+}
