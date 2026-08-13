@@ -28,7 +28,7 @@ The app still uses the existing Supabase project, Google Calendar connection, An
 - Verify all root browser routes and authenticated mutations against a safe environment.
 - Re-enter the non-exportable sensitive credentials for Resend and Google Calendar OAuth (`RESEND_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`).
 - Rotate the mobile bearer token during the coordinated native/web cutover.
-- At the registrar, set `A life.pramitranjan.com 76.76.21.21`; Vercel cannot activate the attached domain while third-party DNS has no matching record.
+- At the registrar, set `CNAME life 9160b0dc48105174.vercel-dns-017.com`; Vercel cannot activate the attached domain while third-party DNS has no matching record.
 - Disable the portfolio cron before enabling this project's cron.
 - Redirect old `/life/*` browser routes and temporarily proxy old `/api/life/*` requests.
 - Remove Life source and dependencies from the portfolio only after the compatibility window closes.
