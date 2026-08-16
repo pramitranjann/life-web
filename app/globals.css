@@ -3069,6 +3069,19 @@ button.life-cal-day:hover { border-color: #232323; background: #111111; color: #
   width: min(100%, 300px);
 }
 
+.life-shell .life-login-form .error-text {
+  margin: -4px 0 0;
+}
+
+.life-shell .life-login-form .primary-button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.life-shell .life-login-form .primary-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .life-shell .life-inline-search-control,
 .life-shell .life-inline-search {
   display: none;

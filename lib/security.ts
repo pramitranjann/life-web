@@ -105,7 +105,12 @@ export function isSafeEmbedUrl(value: string) {
 
 export function isSameOriginRequest(request: NextRequest) {
   const origin = request.headers.get('origin')
-  if (!origin) return false
+  if (!origin) {
+    // Some browsers omit Origin on a same-origin navigation POST. Fetch
+    // Metadata is supplied by the browser and cannot be forged by a
+    // cross-origin form, so it is a safe fallback for that case.
+    return request.headers.get('sec-fetch-site')?.toLowerCase() === 'same-origin'
+  }
 
   // Vercel can expose an internal deployment hostname through
   // `x-forwarded-host` even when the browser is posting from the custom

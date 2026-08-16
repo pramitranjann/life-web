@@ -12,7 +12,7 @@ Ship Pramit's private personal operating system as a standalone web product at `
 ## Current state
 2026-08-17 — `life.pramitranjan.com` resolves to Vercel and serves the standalone app. Browser routes are promoted from `/life/*` to root paths such as `/`, `/tasks`, `/projects`, and `/studio`; all 41 API route handlers remain under `/api/life/*`. Type checking, unit tests, dependency audit, and the Webpack production build pass. Vercel project `pramitranjann/life-web` is connected to GitHub with the Next.js preset and has a Ready production deployment. The portfolio predecessor is removed; its old browser and API paths temporarily redirect/proxy here.
 
-Production login submissions were returning `403` before password verification because the same-origin guard treated Vercel's internal forwarded hostname as canonical. The local fix accepts the browser-facing `request.nextUrl.origin` or direct host while retaining foreign-origin and missing-origin rejection; regression tests cover the Vercel custom-domain case. It is not live until this change is pushed and deployed.
+Production login submissions were returning `403` before password verification. Vercel's internal forwarded hostname caused the first failure; after that fix deployed, real in-app browser form navigations still omitted the `Origin` header. The local follow-up submits login as an in-page JSON request, shows failures inside the form instead of navigating to the API route, and accepts missing `Origin` only when browser Fetch Metadata proves the request is same-origin. It is not live until this follow-up is pushed and deployed.
 
 The app still uses the existing Supabase project, Google Calendar connection, Anthropic synthesis, Resend email, mobile bearer token, and printer device token. All 15 required Life Web variables are present in Vercel Production as of 2026-08-16, including newly restored Resend and write-capable Google Calendar OAuth credentials. The daily cron is configured in this repo but must remain disabled in production until the portfolio copy is disabled.
 
@@ -28,10 +28,11 @@ The ESP32 desk-printer firmware and local ignored `config.h` now live under `har
 - **Local fonts replace Google font fetching.** DM Mono, Clash Display, and Cabinet Grotesk ship with the app so production builds do not depend on a font CDN.
 - **One Life app icon.** Browser favicons, Apple touch icons, and installed-app icons use black `PR` lettering on an edge-to-edge signal-red background.
 - **Next builds use Webpack.** Turbopack stalled during the first standalone compile before emitting route artifacts; Webpack is the verified production path for this checkout.
-- **Login origin checks trust the public request origin first.** Vercel may set `x-forwarded-host` to a deployment hostname even when the form posts from `life.pramitranjan.com`; the guard accepts the browser-facing URL/direct Host and still rejects foreign or absent origins.
+- **Login origin checks trust the public request origin first.** Vercel may set `x-forwarded-host` to a deployment hostname even when the request comes from `life.pramitranjan.com`; the guard accepts the browser-facing URL/direct Host. A missing `Origin` is accepted only with `Sec-Fetch-Site: same-origin`, while foreign and unproven requests remain rejected.
+- **Login stays on the page while authenticating.** The client sends JSON to the login API, displays pending and failure states inline, and navigates to the intended root-level Life route only after the session cookie is set.
 
 ## Open threads
-- Push/deploy the login-origin fix and verify a real form submission redirects away from `/api/admin/login`.
+- Push/deploy the login follow-up and verify a real submission lands on the intended Life route without exposing the API response page.
 - Verify remaining authenticated mutations against a safe environment.
 - Rotate the mobile bearer token during the coordinated native/web cutover.
 - Remove the temporary portfolio compatibility bridge after older browser/native clients have aged out.
@@ -46,4 +47,4 @@ The ESP32 desk-printer firmware and local ignored `config.h` now live under `har
 - The default Next 16 Turbopack production build can stall during compile here; keep `next build --webpack` unless a later upgrade is explicitly verified.
 
 ## Next action
-Push and deploy the login-origin fix, then confirm the live form POST returns a redirect and lands on the intended Life route.
+Push and deploy the login follow-up, then confirm a real login lands on the intended Life route.
