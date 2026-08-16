@@ -105,14 +105,22 @@ export function isSafeEmbedUrl(value: string) {
 
 export function isSameOriginRequest(request: NextRequest) {
   const origin = request.headers.get('origin')
-  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
-  const protocol =
-    request.headers.get('x-forwarded-proto') ??
-    (host?.startsWith('localhost') || host?.startsWith('127.0.0.1') ? 'http' : 'https')
+  if (!origin) return false
 
-  if (!origin || !host) return false
+  // Vercel can expose an internal deployment hostname through
+  // `x-forwarded-host` even when the browser is posting from the custom
+  // domain. The request URL and direct Host header retain the public origin,
+  // so accept either without making the forwarded host the source of truth.
+  const allowedOrigins = new Set([request.nextUrl.origin])
+  const protocol = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  const defaultProtocol = request.nextUrl.protocol.replace(':', '')
 
-  return origin === `${protocol}://${host}`
+  for (const host of [request.headers.get('host'), request.headers.get('x-forwarded-host')]) {
+    const firstHost = host?.split(',')[0]?.trim()
+    if (firstHost) allowedOrigins.add(`${protocol || defaultProtocol}://${firstHost}`)
+  }
+
+  return allowedOrigins.has(origin)
 }
 
 export function getLoginThrottleState(request: NextRequest) {

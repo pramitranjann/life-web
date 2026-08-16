@@ -8,7 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/life/page-body.test.mjs"
+    "test": "node --test lib/life/page-body.test.mjs lib/security.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
