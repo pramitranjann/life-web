@@ -4,7 +4,7 @@ status: building
 platforms: [web, mobile-web]
 tokens: app/globals.css
 figma: none
-updated: 2026-08-13
+updated: 2026-08-17
 ---
 
 # DESIGN.md — Life
@@ -23,6 +23,7 @@ Life is a dense, private operating console: near-black ground, hairline structur
 
 ## Tokens
 **Color:** All semantic colors are `--life-*` variables on `.life-shell` in `app/globals.css`; they never belong on `:root`. Signal red is reserved for action, active state, and time/current-position signals.
+**App icon:** Every browser, Apple touch, and installed-app icon uses black `PR` lettering on an edge-to-edge signal-red background; never use transparency or invert the mark.
 **Type:** `--font-mono` is DM Mono for labels and data; `--life-display` is Clash Display for titles. Use only `--t-micro` through `--t-title`; 10px is the floor.
 **Spacing:** Use `--s-1` through `--s-6` and the shared `--life-gutter`. At phone widths `.content-shell` alone owns the outer horizontal gutter.
 **Radius:** Life is square. Do not add rounded cards, pills, dialogs, or inputs; circles remain valid for dots, checks, and timeline markers.

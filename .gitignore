@@ -11,6 +11,7 @@
 # local configuration and secrets
 .env*
 !.env.example
+hardware/**/config.h
 
 # tooling
 *.tsbuildinfo

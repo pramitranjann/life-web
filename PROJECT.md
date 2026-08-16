@@ -10,9 +10,11 @@ Ship Pramit's private personal operating system as a standalone web product at `
 - Do not break the `/api/life/*` contract consumed by PRLifeMobile and the desk printer.
 
 ## Current state
-2026-08-13 — The initial standalone extraction is committed and pushed to `pramitranjann/life-web`. Browser routes are promoted from `/life/*` to root paths such as `/`, `/tasks`, `/projects`, and `/studio`; all 41 API route handlers remain under `/api/life/*`. Type checking, unit tests, dependency audit, and the Webpack production build pass. Vercel project `pramitranjann/life-web` is connected to GitHub with the Next.js preset and has a Ready production deployment. Login and the authenticated mobile tasks API pass production smoke tests. `life.pramitranjan.com` is attached but awaits its third-party DNS A record.
+2026-08-17 — `life.pramitranjan.com` resolves to Vercel and serves the standalone app. Browser routes are promoted from `/life/*` to root paths such as `/`, `/tasks`, `/projects`, and `/studio`; all 41 API route handlers remain under `/api/life/*`. Type checking, unit tests, dependency audit, and the Webpack production build pass. Vercel project `pramitranjann/life-web` is connected to GitHub with the Next.js preset and has a Ready production deployment. The portfolio predecessor is being removed while its old browser and API paths temporarily redirect/proxy here.
 
-The app still uses the existing Supabase project, Google Calendar connection, Anthropic synthesis, Resend email, mobile bearer token, and printer device token. The daily cron is configured in this repo but must remain disabled in production until the portfolio copy is disabled.
+The app still uses the existing Supabase project, Google Calendar connection, Anthropic synthesis, Resend email, mobile bearer token, and printer device token. All 15 required Life Web variables are present in Vercel Production as of 2026-08-16, including newly restored Resend and write-capable Google Calendar OAuth credentials. The daily cron is configured in this repo but must remain disabled in production until the portfolio copy is disabled.
+
+The ESP32 desk-printer firmware and local ignored `config.h` now live under `hardware/`; Life Web is the sole owner of that integration.
 
 ## Decisions
 - **Standalone repo and Vercel project.** This creates a real analytics and deployment boundary; a subdomain on the portfolio project would only add a hostname filter.
@@ -22,13 +24,13 @@ The app still uses the existing Supabase project, Google Calendar connection, An
 - **Data stays shared initially.** This is an application/deployment split, not a database migration; the existing Supabase project remains authoritative.
 - **Design is carried over, not refreshed.** Existing Life tokens, density, square geometry, component primitives, and mobile behavior are migration invariants.
 - **Local fonts replace Google font fetching.** DM Mono, Clash Display, and Cabinet Grotesk ship with the app so production builds do not depend on a font CDN.
+- **One Life app icon.** Browser favicons, Apple touch icons, and installed-app icons use black `PR` lettering on an edge-to-edge signal-red background.
 - **Next builds use Webpack.** Turbopack stalled during the first standalone compile before emitting route artifacts; Webpack is the verified production path for this checkout.
 
 ## Open threads
 - Verify all root browser routes and authenticated mutations against a safe environment.
-- Re-enter the non-exportable sensitive credentials for Resend and Google Calendar OAuth (`RESEND_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`).
+- Trigger and verify a new standalone production deployment so it consumes the restored Resend and Google Calendar OAuth credentials.
 - Rotate the mobile bearer token during the coordinated native/web cutover.
-- At the registrar, set `CNAME life 9160b0dc48105174.vercel-dns-017.com`; Vercel cannot activate the attached domain while third-party DNS has no matching record.
 - Disable the portfolio cron before enabling this project's cron.
 - Redirect old `/life/*` browser routes and temporarily proxy old `/api/life/*` requests.
 - Remove Life source and dependencies from the portfolio only after the compatibility window closes.
