@@ -182,7 +182,7 @@ export function ProjectsOverview({
           const pct = progressPct(item.done, item.total)
           const due = relativeDueLabel(item.targetDate, today)
           return (
-            <div key={item.slug} className={`life-project-row${item.depth > 0 ? ' is-child' : ''}`}>
+            <div key={item.slug} className={`life-project-row${item.depth > 0 ? ' is-child' : ''}${item.total === 0 ? ' is-empty-project' : ''}`}>
               <span className="life-project-strip" style={{ background: item.color || 'var(--life-label)' }} aria-hidden />
               <Link href={`/projects/${item.slug}`} className="life-project-row-link">
                 <div className="life-project-row-identity" style={{ paddingLeft: `${item.depth * 22}px` }}>

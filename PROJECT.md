@@ -18,6 +18,14 @@ The app still uses the existing Supabase project, Google Calendar connection, An
 
 The ESP32 desk-printer firmware and local ignored `config.h` now live under `hardware/`; Life Web is the sole owner of that integration.
 
+2026-09-22 — The printer worker supports personal, open/MAC-authorized, and 802.1X EAP-PEAP/MSCHAPv2 Wi-Fi. A local dual-SCAD setting scans and tries `SCAD Wireless` followed by `SCAD_Secure_Wireless`, logs the observed security mode and disconnect reason, and permits open association in Arduino ESP32 core 3.x. Enterprise mode requires a local username, password, and trusted RADIUS CA certificate in ignored config.h.
+
+2026-09-22 — SCAD device logs confirmed that open `SCAD Wireless` connected and the printer received a job. The immediate `/complete` HTTPS call failed three times while a later `/claim` worked. The worker now releases the BLE stack before HTTPS, logs largest free heap block, and persists a pending completion report in ESP32 flash; it retries that report before claiming another job and remembers the last printed job across reboots. On-device verification of this recovery remains pending.
+
+2026-09-22 — Phone print management now presents jobs as readable rows and receipt layouts as compact bottom-sheet choices. Project index and detail reduce empty progress metadata, keep detail tabs visible together, and group editable properties at phone widths. These changes are local only; authenticated phone rendering and interactions still need a signed-in browser check before release.
+
+2026-09-22 — Project names and summaries now have visible, keyboard-accessible edit controls. A completely empty project opens with task, sub-project/section, and page starting actions; the task action opens its composer. Print activity is labeled as job state and explicitly avoids claiming live printer connectivity.
+
 ## Decisions
 - **Standalone repo and Vercel project.** This creates a real analytics and deployment boundary; a subdomain on the portfolio project would only add a hostname filter.
 - **No Web Analytics.** Life is private and its page views should not affect public portfolio metrics.

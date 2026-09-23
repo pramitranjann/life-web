@@ -20,6 +20,7 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 #include <BLEDevice.h>
 #include <BLEScan.h>
 #include <BLEClient.h>
@@ -27,6 +28,26 @@
 #include <BLERemoteService.h>
 #include <BLERemoteCharacteristic.h>
 #include "config.h"
+#include <esp_mac.h>
+
+#ifndef WIFI_AUTH_ENTERPRISE
+#define WIFI_AUTH_ENTERPRISE 0
+#endif
+
+#ifndef WIFI_TRY_BOTH_SCAD
+#define WIFI_TRY_BOTH_SCAD 0
+#endif
+
+#if WIFI_AUTH_ENTERPRISE || WIFI_TRY_BOTH_SCAD
+#include "esp_eap_client.h"
+#include "esp_err.h"
+#ifndef WIFI_EAP_IDENTITY
+#define WIFI_EAP_IDENTITY WIFI_USERNAME
+#endif
+#ifndef WIFI_EAP_CA_CERT
+#define WIFI_EAP_CA_CERT ""
+#endif
+#endif
 
 #define PRINTER_SVC_UUID  "000018f0-0000-1000-8000-00805f9b34fb"
 #define PRINTER_CHAR_UUID "00002af1-0000-1000-8000-00805f9b34fb"
@@ -41,13 +62,25 @@
 static BLEAdvertisedDevice *printerDevice = nullptr;
 static BLEClient           *bleClient     = nullptr;
 static BLERemoteCharacteristic *writeChar = nullptr;
+static bool bleInitialized = false;
 static unsigned long lastPoll = 0;
+#if WIFI_AUTH_ENTERPRISE || WIFI_TRY_BOTH_SCAD
+static bool enterpriseAuthenticationConfigured = false;
+#endif
+static volatile uint8_t wifiDisconnectReason = 0;
 // Guards against reprinting: if /complete fails to land (BLE activity often
 // leaves Wi-Fi degraded right after), the job's lease expires server-side and
 // gets reclaimed as pending — the same device would otherwise print it again
 // every poll until a report finally lands. Remembering only the most recent
 // job id is enough since jobs are processed strictly one at a time.
 static String lastPrintedJobId = "";
+// Keep a printed job's completion report until the API acknowledges it.
+// A short TLS failure after BLE printing must not let the next claim race it.
+static String pendingCompletionJobId = "";
+static String pendingCompletionError = "";
+static bool pendingCompletionSuccess = false;
+static Preferences printState;
+static bool printStateReady = false;
 
 // ---- BLE scanner -----------------------------------------------------------
 class ScanCallback : public BLEAdvertisedDeviceCallbacks {
@@ -61,6 +94,7 @@ class ScanCallback : public BLEAdvertisedDeviceCallbacks {
     }
   }
 };
+static ScanCallback scanCallback;
 
 // ---- BLE connection --------------------------------------------------------
 bool bleScan() {
@@ -68,11 +102,12 @@ bool bleScan() {
   Serial.printf("[BLE] Scanning up to %ds for printer...\n", BLE_SCAN_SECONDS);
 
   BLEScan *scan = BLEDevice::getScan();
-  scan->setAdvertisedDeviceCallbacks(new ScanCallback(), true);
+  scan->setAdvertisedDeviceCallbacks(&scanCallback, true);
   scan->setActiveScan(true);
   scan->setInterval(100);
   scan->setWindow(99);
   scan->start(BLE_SCAN_SECONDS, false);
+  scan->clearResults();
 
   if (!printerDevice) {
     Serial.println("[BLE] Printer not found in scan window.");
@@ -84,7 +119,10 @@ bool bleScan() {
 bool bleConnect() {
   if (!printerDevice && !bleScan()) return false;
 
-  if (bleClient) { delete bleClient; bleClient = nullptr; writeChar = nullptr; }
+  if (bleClient) {
+    Serial.println("[BLE] Stale client; waiting for stack reset before reconnecting.");
+    return false;
+  }
   bleClient = BLEDevice::createClient();
 
   Serial.printf("[BLE] Connecting to %s...\n",
@@ -116,8 +154,13 @@ bool bleConnect() {
 bool ensurePrinter() {
   if (bleClient && bleClient->isConnected() && writeChar) return true;
   Serial.println("[BLE] Not connected; reconnecting...");
+  if (bleClient) bleDisconnect();
+  if (!bleInitialized) {
+    bleInitialized = BLEDevice::init("PR-Life-Bridge");
+    if (!bleInitialized) return false;
+  }
   // Re-scan so we get a fresh device object with the correct address type.
-  printerDevice = nullptr;
+  if (printerDevice) { delete printerDevice; printerDevice = nullptr; }
   return bleConnect();
 }
 
@@ -238,26 +281,160 @@ bool printPayload(const String &payload) {
 }
 
 // ---- Wi-Fi -----------------------------------------------------------------
-void ensureWifi() {
-  if (WiFi.status() == WL_CONNECTED) return;
-  Serial.printf("[WiFi] Connecting to %s ...\n", WIFI_SSID);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+void onWifiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
+  wifiDisconnectReason = info.wifi_sta_disconnected.reason;
+}
+
+#if WIFI_AUTH_ENTERPRISE || WIFI_TRY_BOTH_SCAD
+bool configureEnterpriseAuthentication() {
+  if (enterpriseAuthenticationConfigured) return true;
+
+  if (strlen(WIFI_USERNAME) == 0 || strlen(WIFI_PASSWORD) == 0 ||
+      strlen(WIFI_EAP_CA_CERT) == 0) {
+    Serial.println("[WiFi] Enterprise Wi-Fi needs username, password, and a trusted CA certificate.");
+    return false;
+  }
+
+  const esp_err_t identityResult = esp_eap_client_set_identity(
+    reinterpret_cast<const unsigned char *>(WIFI_EAP_IDENTITY), strlen(WIFI_EAP_IDENTITY));
+  const esp_err_t usernameResult = esp_eap_client_set_username(
+    reinterpret_cast<const unsigned char *>(WIFI_USERNAME), strlen(WIFI_USERNAME));
+  const esp_err_t passwordResult = esp_eap_client_set_password(
+    reinterpret_cast<const unsigned char *>(WIFI_PASSWORD), strlen(WIFI_PASSWORD));
+  const esp_err_t certificateResult = esp_eap_client_set_ca_cert(
+    reinterpret_cast<const unsigned char *>(WIFI_EAP_CA_CERT), strlen(WIFI_EAP_CA_CERT));
+  const esp_err_t enableResult = esp_wifi_sta_enterprise_enable();
+
+  if (identityResult != ESP_OK || usernameResult != ESP_OK || passwordResult != ESP_OK ||
+      certificateResult != ESP_OK || enableResult != ESP_OK) {
+    Serial.printf("[WiFi] Enterprise authentication setup failed: identity=%s, username=%s, password=%s, certificate=%s, enable=%s\n",
+      esp_err_to_name(identityResult), esp_err_to_name(usernameResult),
+      esp_err_to_name(passwordResult), esp_err_to_name(certificateResult),
+      esp_err_to_name(enableResult));
+    return false;
+  }
+
+  enterpriseAuthenticationConfigured = true;
+  Serial.println("[WiFi] EAP-PEAP/MSCHAPv2 authentication configured.");
+  return true;
+}
+
+void disableEnterpriseAuthentication() {
+  if (!enterpriseAuthenticationConfigured) return;
+  esp_wifi_sta_enterprise_disable();
+  enterpriseAuthenticationConfigured = false;
+}
+#endif
+
+bool tryWifi(const char *ssid, wifi_auth_mode_t authMode, const char *password) {
+  Serial.printf("[WiFi] Trying \"%s\" (auth %d)...\n", ssid, static_cast<int>(authMode));
+  // Cancel any pending association before changing the station configuration.
+  WiFi.disconnect(false, false);
+  delay(150);
+  wifiDisconnectReason = 0;
+
+  if (authMode == WIFI_AUTH_WPA2_ENTERPRISE) {
+#if WIFI_AUTH_ENTERPRISE || WIFI_TRY_BOTH_SCAD
+    if (!configureEnterpriseAuthentication()) return false;
+    WiFi.setMinSecurity(WIFI_AUTH_WPA2_ENTERPRISE);
+    WiFi.begin(ssid);
+#else
+    Serial.println("[WiFi] Enterprise authentication is not configured in this build.");
+    return false;
+#endif
+  } else {
+#if WIFI_AUTH_ENTERPRISE || WIFI_TRY_BOTH_SCAD
+    disableEnterpriseAuthentication();
+#endif
+    WiFi.setMinSecurity(authMode == WIFI_AUTH_OPEN ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA2_PSK);
+    if (authMode == WIFI_AUTH_OPEN) {
+      WiFi.begin(ssid);
+    } else {
+      WiFi.begin(ssid, password);
+    }
+  }
+
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
     delay(250);
-    Serial.print('.');
   }
-  Serial.println();
-  if (WiFi.status() == WL_CONNECTED)
-    Serial.printf("[WiFi] Connected. IP %s\n", WiFi.localIP().toString().c_str());
-  else
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("[WiFi] Connected to \"%s\". IP %s\n", ssid, WiFi.localIP().toString().c_str());
+    return true;
+  }
+
+  const uint8_t reason = wifiDisconnectReason;
+  if (reason != 0) {
+    Serial.printf("[WiFi] \"%s\" failed: %s (%u), status %d\n", ssid,
+                  WiFi.disconnectReasonName(static_cast<wifi_err_reason_t>(reason)),
+                  reason, static_cast<int>(WiFi.status()));
+  } else {
+    Serial.printf("[WiFi] \"%s\" timed out; status %d\n", ssid, static_cast<int>(WiFi.status()));
+  }
+  return false;
+}
+
+#if WIFI_TRY_BOTH_SCAD
+void scanScadNetworks(wifi_auth_mode_t &deviceAuth, wifi_auth_mode_t &secureAuth) {
+  const int16_t count = WiFi.scanNetworks();
+  if (count < 0) {
+    Serial.printf("[WiFi] Scan failed (%d); trying both SSIDs anyway.\n", count);
+    return;
+  }
+  int32_t deviceRssi = -1000;
+  int32_t secureRssi = -1000;
+  for (int16_t i = 0; i < count; ++i) {
+    const String ssid = WiFi.SSID(i);
+    if (ssid == "SCAD Wireless" && WiFi.RSSI(i) > deviceRssi) {
+      deviceRssi = WiFi.RSSI(i);
+      deviceAuth = WiFi.encryptionType(i);
+    } else if (ssid == "SCAD_Secure_Wireless" && WiFi.RSSI(i) > secureRssi) {
+      secureRssi = WiFi.RSSI(i);
+      secureAuth = WiFi.encryptionType(i);
+    }
+  }
+  WiFi.scanDelete();
+  if (deviceRssi > -1000) {
+    Serial.printf("[WiFi] Found \"SCAD Wireless\": RSSI %ld dBm, auth %d%s\n",
+                  static_cast<long>(deviceRssi), static_cast<int>(deviceAuth),
+                  deviceAuth == WIFI_AUTH_OPEN ? " (open)" : " (protected)");
+  } else {
+    Serial.println("[WiFi] \"SCAD Wireless\" not visible in scan; still trying it.");
+  }
+  if (secureRssi > -1000) {
+    Serial.printf("[WiFi] Found \"SCAD_Secure_Wireless\": RSSI %ld dBm, auth %d%s\n",
+                  static_cast<long>(secureRssi), static_cast<int>(secureAuth),
+                  secureAuth == WIFI_AUTH_WPA2_ENTERPRISE ? " (enterprise)" : " (other)");
+  } else {
+    Serial.println("[WiFi] \"SCAD_Secure_Wireless\" not visible in scan; still trying it.");
+  }
+}
+#endif
+
+void ensureWifi() {
+  if (WiFi.status() == WL_CONNECTED) return;
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(false);
+#if WIFI_TRY_BOTH_SCAD
+  wifi_auth_mode_t deviceAuth = WIFI_AUTH_OPEN;
+  wifi_auth_mode_t secureAuth = WIFI_AUTH_WPA2_ENTERPRISE;
+  scanScadNetworks(deviceAuth, secureAuth);
+  if (tryWifi("SCAD Wireless", deviceAuth, WIFI_PASSWORD)) return;
+  if (tryWifi("SCAD_Secure_Wireless", secureAuth, WIFI_PASSWORD)) return;
+  Serial.println("[WiFi] Both SCAD networks failed; retrying next loop.");
+#else
+  const wifi_auth_mode_t authMode = WIFI_AUTH_ENTERPRISE ? WIFI_AUTH_WPA2_ENTERPRISE :
+    (strlen(WIFI_PASSWORD) == 0 ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA2_PSK);
+  if (!tryWifi(WIFI_SSID, authMode, WIFI_PASSWORD)) {
     Serial.println("[WiFi] FAILED — will retry next loop.");
+  }
+#endif
 }
 
 // ---- API -------------------------------------------------------------------
 String apiPost(const String &path, const String &body, int &outCode) {
-  Serial.printf("[API] Free heap: %d bytes\n", ESP.getFreeHeap());
+  Serial.printf("[API] Free heap: %u bytes; largest block: %u bytes\n",
+                ESP.getFreeHeap(), ESP.getMaxAllocHeap());
   WiFiClientSecure client;
   client.setInsecure();
   client.setTimeout(12000);
@@ -277,7 +454,8 @@ String apiPost(const String &path, const String &body, int &outCode) {
   return resp;
 }
 
-void reportResult(const String &jobId, bool success, const String &errorMsg) {
+bool reportResult(const String &jobId, bool success, const String &errorMsg, bool &applied) {
+  applied = false;
   StaticJsonDocument<256> doc;
   doc["jobId"]    = jobId;
   doc["deviceId"] = DEVICE_ID;
@@ -286,24 +464,69 @@ void reportResult(const String &jobId, bool success, const String &errorMsg) {
   String body;
   serializeJson(doc, body);
 
-  const int maxAttempts = 3;
-  for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-    ensureWifi();
-    int code = 0;
-    apiPost("/api/life/printer/complete", body, code);
-    Serial.printf("[API] complete (success=%d) attempt %d/%d -> HTTP %d\n",
-                  success, attempt, maxAttempts, code);
-    if (code == 200) return;
-    delay(800 * attempt);
+  ensureWifi();
+  if (WiFi.status() != WL_CONNECTED) return false;
+  int code = 0;
+  const String response = apiPost("/api/life/printer/complete", body, code);
+  Serial.printf("[API] complete (success=%d) -> HTTP %d\n", success, code);
+  if (code != 200) return false;
+  StaticJsonDocument<128> acknowledgement;
+  if (!deserializeJson(acknowledgement, response)) {
+    applied = acknowledgement["applied"] == true;
+  }
+  return true;
+}
+
+void queueCompletion(const String &jobId, bool success, const String &errorMsg) {
+  pendingCompletionJobId = jobId;
+  pendingCompletionSuccess = success;
+  pendingCompletionError = errorMsg;
+  if (!printStateReady) return;
+
+  StaticJsonDocument<256> saved;
+  saved["jobId"] = jobId;
+  saved["success"] = success;
+  saved["error"] = errorMsg;
+  String serialized;
+  serializeJson(saved, serialized);
+  if (printState.putString("pending", serialized) == 0) {
+    Serial.println("[JOB] Could not save pending completion to flash.");
   }
 }
 
-// Temporarily drop the BLE connection so TLS has enough heap.
+// Shut down the BLE stack between jobs so TLS gets its heap back. Passing false
+// preserves the ability to initialize BLE again for the next print.
 void bleDisconnect() {
+  if (!bleInitialized) return;
   if (bleClient && bleClient->isConnected()) {
     bleClient->disconnect();
     delay(200);
   }
+  BLEDevice::deinit(false);
+  bleInitialized = false;
+  bleClient = nullptr;
+  writeChar = nullptr;
+  if (printerDevice) { delete printerDevice; printerDevice = nullptr; }
+  delay(300);
+  Serial.printf("[BLE] Released before API. Free heap: %u bytes\n", ESP.getFreeHeap());
+}
+
+bool flushPendingCompletion() {
+  if (pendingCompletionJobId.isEmpty()) return true;
+  bool applied = false;
+  if (!reportResult(pendingCompletionJobId, pendingCompletionSuccess, pendingCompletionError, applied)) {
+    Serial.println("[API] Completion still pending; will retry before claiming another job.");
+    return false;
+  }
+  if (applied) {
+    Serial.println("[API] Completion recorded by server.");
+  } else {
+    Serial.println("[API] Completion response received but not applied; check Print Management.");
+  }
+  if (printStateReady) printState.remove("pending");
+  pendingCompletionJobId = "";
+  pendingCompletionError = "";
+  return true;
 }
 
 void pollOnce() {
@@ -312,6 +535,9 @@ void pollOnce() {
 
   // Free BLE heap before TLS handshake.
   bleDisconnect();
+  ensureWifi();
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (!flushPendingCompletion()) return;
 
   String body = String("{\"deviceId\":\"") + DEVICE_ID + "\"}";
   int code = 0;
@@ -340,7 +566,8 @@ void pollOnce() {
     // Already printed this exact job this session — the prior success report
     // just never landed. Retry the report only; do not print again.
     Serial.printf("[JOB] %s already printed; re-reporting success only.\n", jobId.c_str());
-    reportResult(jobId, true, "");
+    queueCompletion(jobId, true, "");
+    flushPendingCompletion();
     return;
   }
 
@@ -350,12 +577,17 @@ void pollOnce() {
   if (printPayload(payload)) {
     Serial.println("[JOB] Printed OK.");
     lastPrintedJobId = jobId;
+    if (printStateReady && printState.putString("lastPrint", jobId) == 0) {
+      Serial.println("[JOB] Could not save last printed job to flash.");
+    }
     bleDisconnect();  // free heap before reporting
-    reportResult(jobId, true, "");
+    queueCompletion(jobId, true, "");
+    flushPendingCompletion();
   } else {
     Serial.println("[JOB] Print failed.");
     bleDisconnect();
-    reportResult(jobId, false, "BLE write failed");
+    queueCompletion(jobId, false, "BLE write failed");
+    flushPendingCompletion();
   }
 }
 
@@ -365,9 +597,33 @@ void setup() {
   delay(800);
   Serial.println();
   Serial.println("==== PR LIFE print worker (BLE) ====");
-  BLEDevice::init("PR-Life-Bridge");
+  uint8_t wifiMac[6];
+  esp_read_mac(wifiMac, ESP_MAC_WIFI_STA);
+  Serial.printf(
+    "[WiFi] ESP32 Wi-Fi MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+    wifiMac[0], wifiMac[1], wifiMac[2],
+    wifiMac[3], wifiMac[4], wifiMac[5]
+  );
+  printStateReady = printState.begin("prlifeprint", false);
+  if (printStateReady) {
+    lastPrintedJobId = printState.getString("lastPrint", "");
+    const String savedCompletion = printState.getString("pending", "");
+    if (!savedCompletion.isEmpty()) {
+      StaticJsonDocument<256> saved;
+      if (!deserializeJson(saved, savedCompletion)) {
+        pendingCompletionJobId = saved["jobId"].as<String>();
+        pendingCompletionSuccess = saved["success"] == true;
+        pendingCompletionError = saved["error"].as<String>();
+        if (!pendingCompletionJobId.isEmpty()) {
+          Serial.println("[JOB] Restored a completion report to retry.");
+        }
+      }
+    }
+  }
+  WiFi.onEvent(onWifiDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  bleInitialized = BLEDevice::init("PR-Life-Bridge");
   ensureWifi();
-  bleConnect();  // best-effort; will retry on first job if needed
+  if (bleInitialized) bleConnect();  // best-effort; will retry on first job if needed
 }
 
 void loop() {

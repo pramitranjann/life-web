@@ -39,6 +39,7 @@ export function ProjectTasks({
   linkedEvents,
   today,
   timezone,
+  startWithTaskComposer = false,
 }: {
   projectSlug: string
   tasks: TaskRecord[]
@@ -46,10 +47,11 @@ export function ProjectTasks({
   linkedEvents: Record<string, TaskLinkedEvent>
   today: string
   timezone: string
+  startWithTaskComposer?: boolean
 }) {
   const router = useRouter()
   const [items, setItems] = useState<TaskRecord[]>(tasks)
-  const [composer, setComposer] = useState<string | null>(null)
+  const [composer, setComposer] = useState<string | null>(startWithTaskComposer ? BACKLOG : null)
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [milestoneName, setMilestoneName] = useState('')
   const [pendingDeleteMilestone, setPendingDeleteMilestone] = useState<{ id: string; name: string } | null>(null)

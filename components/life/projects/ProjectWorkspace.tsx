@@ -93,6 +93,7 @@ export function ProjectWorkspace({
   // only matters once the page is closed — Overview is the right thing to
   // land back on.
   const [tab, setTab] = useState<Tab>('overview')
+  const [startWithTaskComposer, setStartWithTaskComposer] = useState(false)
   const [treeOpen, setTreeOpen] = useState(true)
 
   // On a phone the rail stacks above the project, so leaving it open buries the
@@ -193,6 +194,11 @@ export function ProjectWorkspace({
         .slice(0, 5),
     [events, today],
   )
+  const isEmptyProject = tasks.length === 0 && milestones.length === 0 && subprojects.length === 0 && pages.length === 0 && events.length === 0
+
+  useEffect(() => {
+    if (tab === 'tasks' && startWithTaskComposer) setStartWithTaskComposer(false)
+  }, [tab, startWithTaskComposer])
 
   async function patchProject(patch: Record<string, unknown>, rollback?: () => void) {
     setError(null)
@@ -431,6 +437,7 @@ export function ProjectWorkspace({
           {editName ? (
             <input
               className="life-project-name-input"
+              aria-label="Project name"
               autoFocus
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -447,13 +454,17 @@ export function ProjectWorkspace({
               }}
             />
           ) : (
-            <h1 className="life-project-name-edit" onClick={() => setEditName(true)} title="Click to rename">
-              {name}
+            <h1 className="life-project-name-heading">
+              <button type="button" className="life-project-name-edit" aria-label={`Rename ${name}`} onClick={() => setEditName(true)}>
+                <span>{name}</span>
+                <span className="life-project-edit-cue" aria-hidden="true">Edit</span>
+              </button>
             </h1>
           )}
           {editSummary ? (
             <textarea
               className="life-project-summary-input"
+              aria-label="Project summary"
               autoFocus
               rows={2}
               value={summary}
@@ -468,9 +479,12 @@ export function ProjectWorkspace({
               }}
             />
           ) : (
-          <p className="life-project-summary-line life-project-summary-edit" onClick={() => setEditSummary(true)} title="Click to edit">
-              {summary || <span className="life-project-summary-empty">Add a summary…</span>}
-            </p>
+            <div className="life-project-summary-line">
+              <button type="button" className="life-project-summary-edit" aria-label={summary ? 'Edit project summary' : 'Add project summary'} onClick={() => setEditSummary(true)}>
+                <span>{summary || <span className="life-project-summary-empty">Add a summary…</span>}</span>
+                <span className="life-project-edit-cue" aria-hidden="true">Edit</span>
+              </button>
+            </div>
           )}
           <div className="life-project-properties" ref={propsRef}>
             <span className={`life-health-dot health-${tone}`} aria-label={`Health: ${tone}`} />
@@ -543,7 +557,7 @@ export function ProjectWorkspace({
             </span>
           </div>
 
-          <div className="life-project-quiet-status">
+          <div className={`life-project-quiet-status${tasks.length === 0 ? ' is-empty-project' : ''}`}>
             <div className="life-project-progress-bar">
               <div className="life-progress-track">
                 <div className="life-progress-fill" style={{ width: `${pct}%` }} />
@@ -627,7 +641,22 @@ export function ProjectWorkspace({
         />
       ) : (
       <div key={tab} className="life-project-tab-body">
-        {tab === 'overview' ? (
+        {tab === 'overview' ? (isEmptyProject && !addingSubproject ? (
+          <div className="life-project-start">
+            <p className="eyebrow">Start this project</p>
+            <h2>What comes first?</h2>
+            <p>Give this project its first task, section, or page.</p>
+            <div className="life-project-start-actions">
+              <button type="button" className="life-btn primary" onClick={() => { setStartWithTaskComposer(true); setTab('tasks') }}>Add a task</button>
+              <button type="button" className="life-btn ghost" onClick={() => setAddingSubproject(true)}>
+                {projectKind === 'ux' && !parentProject ? 'Add a section' : 'Add a sub-project'}
+              </button>
+              <button type="button" className="life-btn ghost" disabled={creatingPage} onClick={() => void createPage()}>
+                {creatingPage ? 'Adding…' : 'Add a page'}
+              </button>
+            </div>
+          </div>
+        ) : (
           <div className="life-project-overview">
             <div className="life-project-children">
               <div className="life-project-children-head">
@@ -772,7 +801,7 @@ export function ProjectWorkspace({
               </div>
             </div>
           </div>
-        ) : null}
+        )) : null}
         {tab === 'tasks' ? (
           <ProjectTasks
             projectSlug={project.slug}
@@ -781,6 +810,7 @@ export function ProjectWorkspace({
             linkedEvents={linkedEvents}
             today={today}
             timezone={timezone}
+            startWithTaskComposer={startWithTaskComposer}
           />
         ) : null}
         {tab === 'events' ? (

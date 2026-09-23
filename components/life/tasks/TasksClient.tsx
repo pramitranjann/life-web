@@ -35,24 +35,28 @@ const PRINT_LAYOUT_CHOICES: Array<{
   label: string
   eyebrow: string
   description: string
+  shortDescription: string
 }> = [
   {
     value: 'compact',
     label: 'Compact',
     eyebrow: 'Fast ticket',
     description: 'Minimal receipt with title, checkbox, and one short meta line.',
+    shortDescription: 'Title, checkbox, and one detail line.',
   },
   {
     value: 'standard',
     label: 'Standard',
     eyebrow: 'Balanced',
     description: 'Timestamped receipt with area and due date. Adds top feed so the cutter does not clip it.',
+    shortDescription: 'Adds time, project, and due date.',
   },
   {
     value: 'focus',
     label: 'Focus',
     eyebrow: 'Deep work',
     description: 'Extra spacing plus task details. Adds top feed so the cutter does not clip it.',
+    shortDescription: 'More room for task details.',
   },
 ]
 
@@ -834,7 +838,7 @@ export function TasksClient({
             >
               <span className="life-print-layout-card-eyebrow">{choice.eyebrow}</span>
               <span className="life-print-layout-card-title">{choice.label}</span>
-              <span className="life-print-layout-card-body">{choice.description}</span>
+              <span className="life-print-layout-card-body"><span className="life-print-layout-long">{choice.description}</span><span className="life-print-layout-short">{choice.shortDescription}</span></span>
             </button>
           ))}
         </div>

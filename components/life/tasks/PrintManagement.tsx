@@ -265,25 +265,26 @@ export function PrintManagement({
     <div className="life-print-section">
       <section className="life-print-status">
         <div className="life-print-status-head">
-          <h3>Printer Status</h3>
+          <h3>Print activity</h3>
           <span className={`life-print-badge state-${printerState === 'error' ? 'failed' : printerState === 'printing' ? 'leased' : printerState === 'queued' ? 'pending' : 'printed'}`}>
-            {printerState === 'printing' ? 'Printing now' : printerState === 'error' ? 'Needs attention' : printerState === 'queued' ? 'Jobs queued' : 'Idle'}
+            {printerState === 'printing' ? 'Job in progress' : printerState === 'error' ? 'Job needs attention' : printerState === 'queued' ? 'Waiting for printer' : 'No active jobs'}
           </span>
         </div>
         <div className="life-print-status-grid">
           <div className="life-print-status-card">
-            <span className="life-print-status-label">Latest board activity</span>
+            <span className="life-print-status-label">Last job picked up</span>
             <span className="life-print-status-value">
-              {latestLease ? whenLabel(latestTimestamp(latestLease), timezone) : 'No lease activity yet'}
+              {latestLease ? whenLabel(latestTimestamp(latestLease), timezone) : 'No jobs picked up yet'}
             </span>
           </div>
-          <div className="life-print-status-card">
-            <span className="life-print-status-label">Latest ESP error</span>
+          <div className={`life-print-status-card${latestBoardError ? '' : ' is-clear'}`}>
+            <span className="life-print-status-label">Latest job error</span>
             <span className={`life-print-status-value${latestBoardError ? ' is-error' : ''}`}>
-              {latestBoardError?.last_error || 'No device errors reported'}
+              {latestBoardError?.last_error || 'No recent job errors'}
             </span>
           </div>
         </div>
+        <p className="life-print-status-note">Job activity only. Printer connection is not monitored here.</p>
       </section>
 
       <div className="life-print-filterbar">
@@ -306,7 +307,7 @@ export function PrintManagement({
       </div>
 
       {/* NEEDS PRINTING */}
-      <section className="life-print-bucket">
+      <section className="life-print-bucket life-print-needs">
         <div className="life-print-bucket-head">
           <h3>Needs Printing</h3>
           <span className="life-print-count">{needsPrinting.length}</span>
@@ -326,7 +327,7 @@ export function PrintManagement({
       </section>
 
       {/* QUEUE */}
-      <section className="life-print-bucket">
+      <section className="life-print-bucket life-print-queue">
         <div className="life-print-bucket-head">
           <h3>Queue</h3>
           <span className="life-print-count">{queueJobs.length}</span>
@@ -348,7 +349,7 @@ export function PrintManagement({
       </section>
 
       {/* NEEDS ATTENTION */}
-      <section className="life-print-bucket">
+      <section className="life-print-bucket life-print-attention">
         <div className="life-print-bucket-head">
           <h3>Needs Attention</h3>
           <span className="life-print-count">{attentionJobs.length}</span>
@@ -380,7 +381,7 @@ export function PrintManagement({
       </section>
 
       {/* PRINTED */}
-      <section className="life-print-bucket">
+      <section className="life-print-bucket life-print-printed">
         <div className="life-print-bucket-head">
           <h3>Printed</h3>
           <span className="life-print-count">{printedJobs.length}</span>
