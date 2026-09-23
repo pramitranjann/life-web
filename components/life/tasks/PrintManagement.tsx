@@ -300,10 +300,10 @@ export function PrintManagement({
           ]}
           onChange={(value) => setProjectFilter(value)}
         />
-        <label className="life-print-check-label">
-          <input type="checkbox" checked={showDone} onChange={(event) => setShowDone(event.target.checked)} />
+        <button type="button" className="life-print-check-label" role="checkbox" aria-checked={showDone} onClick={() => setShowDone((value) => !value)}>
+          <span className={`life-todo-check${showDone ? ' is-checked' : ''}`} aria-hidden="true">{showDone ? '✓' : ''}</span>
           Show completed
-        </label>
+        </button>
       </div>
 
       {/* NEEDS PRINTING */}
@@ -395,7 +395,7 @@ export function PrintManagement({
             getRowId={(job) => job.id}
             rowActions={(job) =>
               job.task_id ? (
-                <button type="button" className="life-btn ghost" disabled={busy} onClick={() => reprint(job.task_id as string)}>
+                <button type="button" className="life-btn life-print-reprint" disabled={busy} onClick={() => reprint(job.task_id as string)}>
                   Reprint
                 </button>
               ) : null

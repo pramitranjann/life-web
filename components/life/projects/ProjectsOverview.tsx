@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -182,10 +182,10 @@ export function ProjectsOverview({
           const pct = progressPct(item.done, item.total)
           const due = relativeDueLabel(item.targetDate, today)
           return (
-            <div key={item.slug} className={`life-project-row${item.depth > 0 ? ' is-child' : ''}${item.total === 0 ? ' is-empty-project' : ''}`}>
+            <div key={item.slug} className={`life-project-row${item.depth > 0 ? ' is-child' : ''}${item.total === 0 ? ' is-empty-project' : ''}`} style={{ '--project-indent': `${item.depth * 22}px` } as CSSProperties}>
               <span className="life-project-strip" style={{ background: item.color || 'var(--life-label)' }} aria-hidden />
               <Link href={`/projects/${item.slug}`} className="life-project-row-link">
-                <div className="life-project-row-identity" style={{ paddingLeft: `${item.depth * 22}px` }}>
+                <div className="life-project-row-identity">
                   <div className="life-project-row-title">
                     {item.depth > 0 ? <span className="life-project-branch" aria-hidden="true">↳</span> : null}
                     <h2>{item.name}</h2>

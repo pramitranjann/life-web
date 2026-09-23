@@ -320,6 +320,7 @@ export function TasksClient({
   const [printBusyId, setPrintBusyId] = useState<string | null>(null)
   const [printNote, setPrintNote] = useState<string | null>(null)
   const [printLayoutRequest, setPrintLayoutRequest] = useState<PrintLayoutRequest | null>(null)
+  const printLayoutDialogRef = useRef<HTMLDialogElement>(null)
   const [swipe, setSwipe] = useState<{ id: string; dx: number; releasing: boolean } | null>(null)
   const swipeGesture = useRef<{ id: string; startX: number; startY: number; locked: 'x' | 'y' | null } | null>(null)
 
@@ -336,6 +337,15 @@ export function TasksClient({
       setEditId(null)
     }
   }, [editId, items])
+
+  useEffect(() => {
+    const dialog = printLayoutDialogRef.current
+    if (!printLayoutRequest || !dialog) return
+    dialog.showModal()
+    return () => {
+      if (dialog.open) dialog.close()
+    }
+  }, [printLayoutRequest])
 
   useEffect(() => {
     const hasActivePrintJobs = printJobs.some((job) => job.status === 'pending' || job.status === 'leased')
@@ -809,13 +819,15 @@ export function TasksClient({
   const isPhone = viewport === 'phone'
   const showRowProject = groupBy !== 'project'
   const printLayoutDialog = printLayoutRequest ? (
-    <div className="life-print-layout-overlay" role="presentation">
-      <div className="life-print-layout-backdrop" onClick={() => closePrintLayoutRequest(null)} />
-      <aside
+    <dialog
+      ref={printLayoutDialogRef}
+      className="life-print-dialog"
+      aria-labelledby="life-print-layout-title"
+      onCancel={(event) => { event.preventDefault(); closePrintLayoutRequest(null) }}
+      onClick={(event) => { if (event.target === event.currentTarget) closePrintLayoutRequest(null) }}
+    >
+      <div
         className={`life-print-layout-panel${isPhone ? ' is-phone' : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="life-print-layout-title"
       >
         <div className="life-print-layout-head">
           <div>
@@ -842,8 +854,8 @@ export function TasksClient({
             </button>
           ))}
         </div>
-      </aside>
-    </div>
+      </div>
+    </dialog>
   ) : null
 
   function renderBoard() {

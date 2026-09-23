@@ -26,6 +26,8 @@ The ESP32 desk-printer firmware and local ignored `config.h` now live under `har
 
 2026-09-22 — Project names and summaries now have visible, keyboard-accessible edit controls. A completely empty project opens with task, sub-project/section, and page starting actions; the task action opens its composer. Print activity is labeled as job state and explicitly avoids claiming live printer connectivity.
 
+2026-09-22 — Phone follow-up uses the Life check control for the completed filter, a native modal for receipt-layout choice so it clears the phone navigation, and a persistent bordered Reprint button. Board due dates use the same boxed metadata treatment as neighboring tags. The Projects index restores row spacing and indents sub-project rows by their hierarchy depth.
+
 ## Decisions
 - **Standalone repo and Vercel project.** This creates a real analytics and deployment boundary; a subdomain on the portfolio project would only add a hostname filter.
 - **No Web Analytics.** Life is private and its page views should not affect public portfolio metrics.
